@@ -73,15 +73,33 @@ class ViewController: UITableViewController {
     
     func submit(_ answer: String) {
         let lowercasedAnswer = answer.lowercased()
+        
+        let errorTitle: String
+        let errorMessage: String
+        
         if isPossible(word: lowercasedAnswer) {
             if isOriginal(word: lowercasedAnswer) {
                 if isReal(word: lowercasedAnswer) {
                     usedWords.insert(answer, at: 0)
                     let indexPath = IndexPath(row: 0, section: 0)
                     tableView.insertRows(at: [indexPath], with: .automatic)
+                    return
+                } else {
+                    errorTitle = "Word not recognised"
+                    errorMessage = "You can only submit real words."
                 }
+            } else {
+                errorTitle = "Word used already"
+                errorMessage = "Be more original!"
             }
+        } else {
+            guard let title = title?.lowercased() else { return }
+                    errorTitle = "Word not possible"
+                    errorMessage = "You can't spell that word from \(title)"
         }
+        let ac = UIAlertController(title: errorTitle, message: errorMessage, preferredStyle: .alert)
+        ac.addAction(UIAlertAction(title: "Ok", style: .default))
+        present(ac, animated: true)
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
