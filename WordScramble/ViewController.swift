@@ -16,7 +16,7 @@ class ViewController: UITableViewController {
         super.viewDidLoad()
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(promptForAnswer))
-        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(startGame))
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(restartGame))
         
         if let startWordsURL = Bundle.main.url(forResource: "start", withExtension: "txt") {
             if let startWords = try? String(contentsOf: startWordsURL, encoding: String.defaultCStringEncoding) {
@@ -26,6 +26,7 @@ class ViewController: UITableViewController {
         if allWords.isEmpty {
             allWords = ["Silkworm"]
         }
+        
         startGame()
         // Do any additional setup after loading the view.
     }
@@ -41,9 +42,40 @@ class ViewController: UITableViewController {
         ac.addAction(submitAction)
         present(ac, animated: true)
     }
+    
     @objc func startGame() {
+        let userDefaults = UserDefaults.standard
+        if let savedStartWord = userDefaults.data(forKey: "savedStartWord") {
+            let jsonDecoder = JSONDecoder()
+            do {
+                title = try jsonDecoder.decode(String.self, from: savedStartWord)
+            } catch {
+                print("Failed to load words: \(error)")
+            }
+        } else {
+            title = allWords.randomElement()
+            saveStartWord()
+        }
+        if let savedUsedWords = userDefaults.data(forKey: "usedWords") {
+            let jsonDecoder = JSONDecoder()
+            do {
+                usedWords = try jsonDecoder.decode([String].self, from: savedUsedWords)
+            } catch {
+                print("Failed to load words: \(error)")
+            }
+        } else {
+            usedWords.removeAll(keepingCapacity: true)
+            saveUsedWords()
+        }
+        
+        tableView.reloadData()
+    }
+    
+    @objc func restartGame() {
         title = allWords.randomElement()
         usedWords.removeAll(keepingCapacity: true)
+        saveStartWord()
+        saveUsedWords()
         tableView.reloadData()
     }
     
@@ -96,6 +128,7 @@ class ViewController: UITableViewController {
                         usedWords.insert(lowercasedAnswer, at: 0)
                         let indexPath = IndexPath(row: 0, section: 0)
                         tableView.insertRows(at: [indexPath], with: .automatic)
+                        saveUsedWords()
                         return
                     }
                     
@@ -119,6 +152,46 @@ class ViewController: UITableViewController {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Word", for: indexPath)
         cell.textLabel?.text = usedWords[indexPath.row]
         return cell
+    }
+    
+    func saveStartWord() {
+        let jsonEncoder = JSONEncoder()
+        if let savedData = try? jsonEncoder.encode(title) {
+            let defaults = UserDefaults.standard
+            defaults.set(savedData, forKey: "savedStartWord")
+        }
+    }
+    
+    func saveUsedWords() {
+        let jsonEncoder = JSONEncoder()
+        if let savedData = try? jsonEncoder.encode(usedWords) {
+            let defaults = UserDefaults.standard
+            defaults.set(savedData, forKey: "usedWords")
+        }
+    }
+    
+    func loadUsedWords() {
+        let userDefaults = UserDefaults.standard
+        if let savedUsedWords = userDefaults.data(forKey: "usedWords") {
+            let jsonDecoder = JSONDecoder()
+            do {
+                usedWords = try jsonDecoder.decode([String].self, from: savedUsedWords)
+            } catch {
+                print("Failed to load words: \(error)")
+            }
+        }
+    }
+    
+    func loadStartWord() {
+        let userDefaults = UserDefaults.standard
+        if let savedStartWord = userDefaults.data(forKey: "savedStartWord") {
+            let jsonDecoder = JSONDecoder()
+            do {
+                title = try jsonDecoder.decode(String.self, from: savedStartWord)
+            } catch {
+                print("Failed to load words: \(error)")
+            }
+        }
     }
 
 
